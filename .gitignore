@@ -1,0 +1,17 @@
+# Dataset (download separately, see README)
+pushT/pusht/
+*.zarr/
+*.zip
+
+# Trained models and run outputs
+runs/
+*.pt
+*.pth
+
+# Python
+__pycache__/
+*.pyc
+
+# Claude Code files
+CLAUDE.md
+.claude/
