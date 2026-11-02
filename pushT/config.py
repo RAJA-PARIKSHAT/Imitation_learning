@@ -17,7 +17,10 @@ class TrainConfig:
 
     # --- Model ---
     policy_type: Literal["mse", "flow"] = "mse"
-    hidden_dims: tuple[int, ...] = (256, 256, 256)
+    # Hidden widths per policy, chosen so both have about the same parameter count
+    # (MSE ~137k, flow ~139k; flow also carries the time encoder and FiLM layers).
+    mse_hidden_dims: tuple[int, ...] = (256, 256, 256)
+    flow_hidden_dims: tuple[int, ...] = (160, 160, 160, 160)
     # Euler integration steps at sampling time (only used by the flow policy).
     flow_num_steps: int = 10
 
@@ -38,6 +41,6 @@ class TrainConfig:
     # Run a rollout evaluation every this many epochs.
     eval_interval: int = 10
     num_eval_episodes: int = 20
-    # Results go to <output_dir>/<run_name>/.
-    run_name: str = "MSEPolicy"
+    # Results go to <output_dir>/<run_name>/. None -> MSEPolicy or FlowPolicy by policy type.
+    run_name: str | None = None
     output_dir: Path = Path("runs")

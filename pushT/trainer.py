@@ -1,7 +1,8 @@
 """Training utilities and the Trainer for Push-T policies."""
 
+import argparse
 import random
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
 import numpy as np
@@ -10,7 +11,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from config import TrainConfig
 from data import PushTChunkDataset
-from model import MSEPolicy
+from model import build_policy
 
 
 def set_seed(seed: int) -> None:
@@ -139,8 +140,20 @@ class Trainer:
         self.save_checkpoint("final")
 
 
+RUN_NAMES = {"mse": "MSEPolicy", "flow": "FlowPolicy"}
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Train a Push-T policy.")
+    parser.add_argument("--policy", choices=["mse", "flow"], default="mse")
+    parser.add_argument("--run_name", default=None, help="default: MSEPolicy or FlowPolicy")
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
     cfg = TrainConfig()
+    cfg = replace(cfg, policy_type=args.policy, run_name=args.run_name or cfg.run_name or RUN_NAMES[args.policy])
     set_seed(cfg.seed)
 
     dataset = PushTChunkDataset(str(cfg.zarr_path), chunk_size=cfg.chunk_size)
@@ -148,19 +161,25 @@ def main() -> None:
 
     state_dim = dataset.states.shape[1]
     action_dim = dataset.actions.shape[1]
-    model = MSEPolicy(state_dim, cfg.chunk_size * action_dim, cfg.hidden_dims)
+    hidden_dims = cfg.flow_hidden_dims if cfg.policy_type == "flow" else cfg.mse_hidden_dims
+    model = build_policy(cfg.policy_type, state_dim, action_dim, cfg.chunk_size, hidden_dims)
+    print(f"{cfg.policy_type} policy, hidden {hidden_dims}: "
+          f"{sum(p.numel() for p in model.parameters()):,} parameters -> runs/{cfg.run_name}")
 
-    # Stored as tensors so the checkpoint loads without pickling numpy arrays.
-    normalizer_stats = {
+    # Everything evaluation needs to rebuild the model and the data scaling.
+    # Stats are stored as tensors so the checkpoint loads without pickling numpy arrays.
+    ckpt_extra = {
+        "policy_type": cfg.policy_type,
+        "hidden_dims": hidden_dims,
         "normalizer": {
             "state_mean": torch.from_numpy(dataset.mean_states),
             "state_std": torch.from_numpy(dataset.std_states),
             "action_mean": torch.from_numpy(dataset.mean_actions),
             "action_std": torch.from_numpy(dataset.std_actions),
-        }
+        },
     }
 
-    trainer = Trainer(cfg, model, train_loader, ckpt_extra=normalizer_stats)
+    trainer = Trainer(cfg, model, train_loader, ckpt_extra=ckpt_extra)
     trainer.fit()
 
 
