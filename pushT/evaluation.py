@@ -10,7 +10,7 @@ import gym_pusht
 
 
 
-RUNS_DIR = Path("/home/parikshat/MyWorkings/learning/imitation_learning/pushT/runs")
+RUNS_DIR = Path(__file__).resolve().parent / "runs"   # same folder the trainer writes to
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Where the render window opens (x,y). Without this the window system chose the second

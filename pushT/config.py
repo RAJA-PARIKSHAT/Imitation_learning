@@ -3,13 +3,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+# Paths below are relative to this file, so the scripts work from any directory.
+HERE = Path(__file__).resolve().parent
+
 
 @dataclass
 class TrainConfig:
     # --- Data ---
-    zarr_path: Path = Path(
-        "/home/parikshat/MyWorkings/learning/imitation_learning/pushT/pusht/pusht_cchi_v7_replay.zarr"
-    )
+    zarr_path: Path = HERE / "pusht" / "pusht_cchi_v7_replay.zarr"
     # Number of future actions predicted per state (action chunk length).
     chunk_size: int = 8
     # Fraction of episodes held out for validation (split by episode, not by sample).
@@ -43,4 +44,4 @@ class TrainConfig:
     num_eval_episodes: int = 20
     # Results go to <output_dir>/<run_name>/. None -> MSEPolicy or FlowPolicy by policy type.
     run_name: str | None = None
-    output_dir: Path = Path("runs")
+    output_dir: Path = HERE / "runs"
